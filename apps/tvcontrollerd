@@ -1,0 +1,149 @@
+#!/usr/bin/python2
+
+
+# TV Controller server
+
+import argparse, os, logging, time, curses
+
+from TVControllerLib.TVControllerServer import *
+
+
+IRKeyTable = { ord('0'): 0x30 ,
+				ord('1'): 0x31,
+				ord('2'): 0x32,
+				ord('3'): 0x33,
+				ord('4'): 0x34,
+				ord('5'): 0x35,
+				ord('6'): 0x36,
+				ord('7'): 0x37,
+				ord('8'): 0x38,
+				ord('9'): 0x39,
+				259: 0x3A,
+				258: 0x3B,
+				260: 0x3C,
+				261: 0x3D,
+				010: 0x3E,	
+				ord('p'): 0x28
+			  }
+				  
+				  
+#define IR_BD_KEY_0					0x30
+#define IR_BD_KEY_1					0x31
+#define IR_BD_KEY_2					0x32
+#define IR_BD_KEY_3					0x33
+#define IR_BD_KEY_4					0x34
+#define IR_BD_KEY_5					0x35
+#define IR_BD_KEY_6					0x36
+#define IR_BD_KEY_7					0x37
+#define IR_BD_KEY_8					0x38
+#define IR_BD_KEY_9					0x39
+#define IR_BD_KEY_UP				0x3A
+#define IR_BD_KEY_DOWN				0x3B
+#define IR_BD_KEY_LEFT				0x3C
+#define IR_BD_KEY_RIGHT				0x3D
+#define IR_BD_KEY_ENTER				0x3E
+#define IR_BD_KEY_MOVE_BEGIN		0x3F
+#define IR_BD_KEY_MOVE_END			0x40
+#define IR_BD_KEY_FAST_BACK			0x41
+#define IR_BD_KEY_FAST_FORWARD		0x42
+#define IR_BD_KEY_PLAY				0x43
+#define IR_BD_KEY_PAUSE				0x44
+#define IR_BD_KEY_STOP				0x45
+#define IR_BD_KEY_MENU				0x46
+#define IR_BD_KEY_RETURN			0x46
+#define IR_BD_KEY_TOOLS				0x47
+#define IR_BD_KEY_RED				0x48
+#define IR_BD_KEY_GREEN				0x49
+#define IR_BD_KEY_YELLOW			0x4A
+#define IR_BD_KEY_BLUE				0x4B
+#define IR_BD_KEY_TELETEXT			0x4C
+#define IR_BD_KEY_HELP				0x4D
+#define IR_BD_KEY_POWER				0x4E
+
+
+def run_server(win, args, server):
+	
+	
+	help_text = ['q: Quit',
+				'0 - 9: Numbers',
+				'Arrow Keys',
+				'p: Power Key'
+					]
+	
+	cursor_pos = (18, 6)
+	status_pos = (20, 0)
+	x = 0
+	for text in help_text:
+		win.addstr(x, 0, text)
+		x += 1
+	win.addstr(cursor_pos[0], 0, 'Key: ')
+	win.hline(19, 0, '-', 80)
+
+	while True:
+		packet = server.readPacket()
+		if packet :
+			if packet.command() == TVControllerServer.COMMAND_DEBUG_MESSAGE:
+				win.addstr(status_pos[0], status_pos[1], "Debug:%s" %  packet.data() )
+				logging.info("Debug: %s" % packet.data())
+			if packet.command() == TVControllerServer.COMMAND_KEY_PRESS:
+				logging.info("Key press %d" % ord(packet.data()[0]))
+		
+		win.move(cursor_pos[0], cursor_pos[1])
+		key = win.getch()
+		if key == ord('q'):
+			return
+		win.addstr(cursor_pos[0], cursor_pos[1], "%04d" % key)
+		if key in IRKeyTable:
+			key_code = IRKeyTable[key]
+			win.addstr(status_pos[0], status_pos[1], "Sending Keycode: %02X" % key_code  )
+			server.sendKeyCode(key_code)
+		else:
+			server.sendKeyCode(key)
+			
+		#curses.napms(1000)
+		
+	
+
+def main():
+	parser = argparse.ArgumentParser(description='TVController Daemon Server')
+
+	parser.add_argument('--device',
+						dest='device',
+						help='device of serial port',
+						default='/dev/ttyACM0'
+						)
+
+
+	parser.add_argument('-v', '--verbose', 
+						dest="isVerbose",
+						action="store_true", 
+						help="Show more messages", 
+						default=False)
+	
+	parser.add_argument('-t', '--set-time',
+						dest='isSetTime',
+						action='store_true',
+						help='Set time and exit',
+						default=False)	
+
+	args = parser.parse_args()
+
+	logLevel = logging.NOTSET
+	if args.isVerbose:
+		logLevel = logging.DEBUG
+		logging.basicConfig(level = logLevel)
+		logging.info("Set verbose mode on")
+
+
+	server = TVControllerServer()
+	if server.connect(args.device, 57600):
+		server.sendDateTime()
+	if args.isSetTime:
+		return
+	
+	curses.initscr()	
+	#server.sendUsers()
+	curses.wrapper(run_server, args, server)
+
+if __name__ == "__main__":
+	main()
