@@ -14,7 +14,7 @@ indent_mode=2
 
 [project]
 name=TVController
-base_path=/home/bill/Apps/TVController
+base_path=/home/bill/Apps/tv-monitor
 description=
 file_patterns=
 
@@ -28,7 +28,7 @@ FILE_NAME_0=2489;Python;0;EUTF-8;1;1;0;%2Fhome%2Fbill%2FApps%2FTVController%2Fap
 FILE_NAME_1=4421;Python;0;EUTF-8;1;1;0;%2Fhome%2Fbill%2FApps%2FTVController%2Fapps%2FTVControllerLib%2FTVControllerServer.py;0;4
 
 [VTE]
-last_dir=/home/bill/Apps/TVController/arduino
+last_dir=/home/bill/Apps/tv-monitor/arduino
 
 [build-menu]
 NF_00_LB=_Make
